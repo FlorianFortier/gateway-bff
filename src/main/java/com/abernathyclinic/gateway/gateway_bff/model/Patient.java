@@ -5,9 +5,9 @@ import java.util.List;
 
 
 public class Patient {
-    private String name;
-    private int age;
-    private String gender; // "m" ou "f"
+
+
+    private String nom;
     private List<String> medicalNotes;
     private String prenom;
     private LocalDate dateDeNaissance;
@@ -18,28 +18,13 @@ public class Patient {
     private LocalDate createdAt;
     private String whoLastModified;
 
-    public String getName() {
-        return name;
+
+    public String getNom() {
+        return nom;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
-    }
-
-    public String getGender() {
-        return gender;
-    }
-
-    public void setGender(String gender) {
-        this.gender = gender;
+    public void setNom(String nom) {
+        this.nom = nom;
     }
 
     public List<String> getMedicalNotes() {

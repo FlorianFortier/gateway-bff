@@ -10,6 +10,7 @@ services:
       - "9101:9101"
     environment:
       - SPRING_APPLICATION_NAME=gateway-bff
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://192.168.0.102:3309/UsersPatient
       - SERVER_PORT=9101
       - AUTH_CONFIG_USERNAME=${auth-config.username}
       - AUTH_CONFIG_PASSWORD=${auth-config.password}

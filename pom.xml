@@ -12,7 +12,7 @@
 	<artifactId>gateway-bff</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>gateway-bff</name>
-	<description>API Gateway that serves also the front-end</description>
+	<description>API Gateway</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -40,6 +40,10 @@
 			<artifactId>spring-cloud-config-server</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-gateway-mvc</artifactId>
 		</dependency>
@@ -51,6 +55,11 @@
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
 			<version>0.11.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<version>3.1.2</version>
 		</dependency>
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>

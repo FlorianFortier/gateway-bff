@@ -1,56 +1,69 @@
 package com.abernathyclinic.gateway.gateway_bff.controller;
 
-import com.abernathyclinic.gateway.gateway_bff.AuthRequest;
+import com.abernathyclinic.gateway.gateway_bff.service.CustomUserDetailsService;
 import com.abernathyclinic.gateway.gateway_bff.service.JwtService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 public class JwtController {
 
-    private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final UserDetailsService userDetailsService;
 
-    public JwtController(AuthenticationManager authenticationManager, JwtService jwtService, UserDetailsService userDetailsService) {
-        this.authenticationManager = authenticationManager;
+    public JwtController(JwtService jwtService,  CustomUserDetailsService userDetailsService, AuthenticationManager authenticationManager) {
         this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
     }
+
+    /**
+     * Endpoint pour générer un token JWT basé sur les informations fournies par le front.
+     *
+     * @param claims Les informations utilisateur envoyées par le front.
+     * @return Token JWT
+     */
     @PostMapping("/token")
-    public String generateToken(@RequestBody AuthRequest authRequest) {
+    public ResponseEntity<String> generateToken(@RequestBody Map<String, Object> claims) {
         try {
-            // Authentifie l'utilisateur
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword())
-            );
+            // Valider et extraire les informations utilisateur
+            String username = (String) claims.get("username");
+            @SuppressWarnings("unchecked")
+            List<String> roles = (List<String>) claims.get("roles");
 
-            // Vérifier si l'utilisateur a le rôle ORGANIZER
-            boolean hasOrganizerRole = authentication.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .anyMatch(role -> role.equals("ROLE_ORGANIZER"));
-
-            if (!hasOrganizerRole) {
-                throw new RuntimeException("Access denied: Only organizers can generate tokens");
+            if (username == null || roles == null) {
+                return ResponseEntity.badRequest().body("Invalid context provided");
             }
 
-            // Si l'authentification est réussie, charge les détails de l'utilisateur
-            UserDetails userDetails = userDetailsService.loadUserByUsername(authRequest.getUsername());
+            // Générer un token JWT
+            String token = jwtService.generateToken(username, roles);
 
-            // Génère et retourne un token JWT
-            return jwtService.generateToken(userDetails);
-        } catch (AuthenticationException e) {
-            throw new RuntimeException("Invalid username or password");
+            return ResponseEntity.ok(token);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error generating token: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/validate")
+    public ResponseEntity<String> validateToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing or invalid Authorization header");
+        }
+
+        String jwt = authHeader.substring(7); // Retire "Bearer "
+        if (jwtService.isTokenValid(jwt)) {
+            return ResponseEntity.ok("Valid Token");
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Token");
         }
     }
 }
+

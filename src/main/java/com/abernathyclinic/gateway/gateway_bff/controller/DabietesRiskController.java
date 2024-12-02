@@ -28,20 +28,12 @@ public class DabietesRiskController {
 
     @PostMapping("/risk")
     public ResponseEntity<String> calculateRisk(@RequestBody Patient patient, @RequestHeader RequestHeader authCreads) {
-        // Authentifie l'utilisateur
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken("user", "password")
-        );
-
-        // Génère un token JWT
-        String token = jwtService.generateToken((UserDetails) authentication);
 
         // Ajoute le token JWT dans les en-têtes de la requête
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + token);
 
         HttpEntity<Patient> request = new HttpEntity<>(patient, headers);
-        String url = "http://localhost:8080/api/diabetes/risk";
+        String url = "http://192.168.0.102:8080/api/diabetes/risk";
         ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
         return ResponseEntity.ok(response.getBody());
     }
