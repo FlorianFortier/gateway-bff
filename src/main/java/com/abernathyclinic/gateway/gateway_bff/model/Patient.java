@@ -7,8 +7,9 @@ import java.util.List;
 public class Patient {
 
 
+    private String id;
     private String nom;
-    private List<String> medicalNotes;
+    private List<String> note;
     private String prenom;
     private LocalDate dateDeNaissance;
     private String genre;
@@ -18,7 +19,23 @@ public class Patient {
     private LocalDate createdAt;
     private String whoLastModified;
 
+    public void setId(String id) {
+        this.id = id;
+    }
 
+    public String getAge() {
+        return age;
+    }
+
+    public void setAge(String age) {
+        this.age = age;
+    }
+
+    private String age;
+
+    public String getId() {
+        return id;
+    }
     public String getNom() {
         return nom;
     }
@@ -27,12 +44,12 @@ public class Patient {
         this.nom = nom;
     }
 
-    public List<String> getMedicalNotes() {
-        return medicalNotes;
+    public List<String> getNote() {
+        return note;
     }
 
-    public void setMedicalNotes(List<String> medicalNotes) {
-        this.medicalNotes = medicalNotes;
+    public void setNote(List<String> medicalNotes) {
+        this.note = medicalNotes;
     }
 
     public String getPrenom() {

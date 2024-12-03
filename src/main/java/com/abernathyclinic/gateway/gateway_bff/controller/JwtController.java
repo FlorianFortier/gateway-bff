@@ -1,11 +1,9 @@
 package com.abernathyclinic.gateway.gateway_bff.controller;
 
-import com.abernathyclinic.gateway.gateway_bff.service.CustomUserDetailsService;
 import com.abernathyclinic.gateway.gateway_bff.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,7 +18,7 @@ public class JwtController {
 
     private final JwtService jwtService;
 
-    public JwtController(JwtService jwtService,  CustomUserDetailsService userDetailsService, AuthenticationManager authenticationManager) {
+    public JwtController(JwtService jwtService) {
         this.jwtService = jwtService;
     }
 
