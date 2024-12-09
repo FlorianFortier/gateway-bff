@@ -5,6 +5,11 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
 import java.security.Key;
 import java.util.Date;
@@ -12,15 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Service;
 
 /**
  * Service de gestion des JWT (JSON Web Tokens) pour l'authentification et l'autorisation.
@@ -35,24 +31,6 @@ public class JwtService {
     private long jwtExpiration;
 
     /**
-     * Définit la clé secrète utilisée pour signer les JWT.
-     *
-     * @param secretKey La clé secrète en base64.
-     */
-    public void setSecretKey(String secretKey) {
-        this.secretKey = secretKey;
-    }
-
-    /**
-     * Définit la durée d'expiration des JWT.
-     *
-     * @param jwtExpiration La durée en millisecondes.
-     */
-    public void setJwtExpiration(long jwtExpiration) {
-        this.jwtExpiration = jwtExpiration;
-    }
-
-    /**
      * Extrait le nom d'utilisateur (subject) d'un JWT.
      *
      * @param token Le JWT à analyser.
@@ -65,9 +43,9 @@ public class JwtService {
     /**
      * Extrait une information spécifique (claim) d'un JWT.
      *
-     * @param token           Le JWT à analyser.
-     * @param claimsResolver  Une fonction pour extraire l'information désirée.
-     * @param <T>             Le type de l'information extraite.
+     * @param token          Le JWT à analyser.
+     * @param claimsResolver Une fonction pour extraire l'information désirée.
+     * @param <T>            Le type de l'information extraite.
      * @return L'information extraite.
      */
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
@@ -110,35 +88,14 @@ public class JwtService {
     }
 
     /**
-     * Extrait les informations d'expiration d'un JWT.
-     *
-     * @param token Le JWT à analyser.
-     * @return La date d'expiration du token.
-     */
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
-
-    /**
-     * Vérifie si un JWT est expiré.
-     *
-     * @param token Le JWT à analyser.
-     * @return {@code true} si le token est expiré, sinon {@code false}.
-     */
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
-    /**
      * Extrait tous les claims d'un JWT.
      *
      * @param token Le JWT à analyser.
      * @return Les claims du token.
-     * @throws IllegalArgumentException Si le token est nul ou vide.
      */
     private Claims extractAllClaims(String token) {
         if (token == null || token.isEmpty()) {
-            throw new IllegalArgumentException("Decode argument cannot be null or empty");
+            throw new IllegalArgumentException("Token cannot be null or empty");
         }
         return Jwts.parserBuilder()
                 .setSigningKey(getSignInKey())
@@ -159,44 +116,40 @@ public class JwtService {
     }
 
     /**
-     * Valide un JWT et génère une requête HTTP correspondante.
+     * Valide un JWT à partir d'un `ServerWebExchange` et construit les en-têtes HTTP si valide.
      *
-     * @param request La requête HTTP contenant le JWT dans l'en-tête Authorization.
-     * @return Une entité HTTP valide ou une réponse d'erreur si le token est invalide.
+     * @param exchange L'échange serveur contenant les en-têtes de la requête.
+     * @return Un `Mono<HttpHeaders>` avec les en-têtes construits si le token est valide.
      */
-    public HttpEntity<Object> validateJwt(HttpServletRequest request) {
-        String authorizationHeader = request.getHeader("Authorization");
+    public Mono<HttpHeaders> validateAndBuildHeaders(ServerWebExchange exchange) {
+        String authorizationHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).build();
+            return Mono.error(new SecurityException("Unauthorized: Missing or invalid Authorization header"));
         }
 
         String token = authorizationHeader.substring(7);
         if (!isTokenValid(token)) {
-            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).build();
-        }
-        return null;
-    }
-
-    /**
-     * Valide un JWT et construit des en-têtes HTTP.
-     *
-     * @param request La requête HTTP contenant le JWT dans l'en-tête Authorization.
-     * @return Les en-têtes HTTP construits.
-     * @throws SecurityException Si le token est manquant ou invalide.
-     */
-    public HttpHeaders validateAndBuildHeaders(HttpServletRequest request) {
-        String authorizationHeader = request.getHeader("Authorization");
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            throw new SecurityException("Unauthorized: Missing or invalid Authorization header");
-        }
-
-        String token = authorizationHeader.substring(7);
-        if (!isTokenValid(token)) {
-            throw new SecurityException("Unauthorized: Invalid token");
+            return Mono.error(new SecurityException("Unauthorized: Invalid token"));
         }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", authorizationHeader);
-        return headers;
+        headers.set(HttpHeaders.AUTHORIZATION, authorizationHeader);
+        return Mono.just(headers);
+    }
+
+    /**
+     * Valide un JWT à partir d'un `ServerWebExchange`.
+     *
+     * @param exchange L'échange serveur contenant les en-têtes de la requête.
+     * @return Un `Mono<Boolean>` indiquant si le token est valide.
+     */
+    public Mono<Boolean> validateJwt(ServerWebExchange exchange) {
+        String authorizationHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return Mono.just(false);
+        }
+
+        String token = authorizationHeader.substring(7);
+        return Mono.just(isTokenValid(token));
     }
 }
